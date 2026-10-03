@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Headless Hero - 2D Cyberpunk Auto-Runner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-container">
+    <!-- 60 FPS 4K Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Center Screen Milestone / Warp Banner -->
+    <div id="game-banner" class="game-banner hidden">
+      <div id="game-banner-title" class="game-banner-title">CHECKPOINT UNLOCKED</div>
+      <div id="game-banner-sub" class="game-banner-sub">SECTOR 2 READY</div>
+    </div>
+
+    <!-- Top Account Bar (Login, Cloud-Sync, Admin Access) -->
+    <div id="account-bar" class="account-bar">
+      <div class="account-bar-left">
+        <span class="account-icon">👤</span>
+        <span id="account-username" class="account-username">GUEST (OFFLINE)</span>
+        <span id="account-role-badge" class="account-badge hidden">OPERATIVE</span>
+      </div>
+      <div class="account-bar-right">
+        <button id="btn-open-admin" class="btn-account-action btn-admin hidden">⚡ ADMIN DASHBOARD</button>
+        <button id="btn-open-login" class="btn-account-action">🔑 LOGIN / REGISTER</button>
+        <button id="btn-account-logout" class="btn-account-action btn-logout hidden">🚪 LOGOUT</button>
+      </div>
+    </div>
+
+    <!-- In-Game HUD -->
+    <div id="game-hud" class="hidden">
+      <div class="hud-top-bar">
+        <div class="hud-left">
+          <!-- Player Health Bar -->
+          <div class="hud-bar-container">
+            <span class="hud-label">HP</span>
+            <div class="hud-progress-track">
+              <div id="hud-hp-fill" class="hud-bar-fill hp-fill" style="width: 100%;"></div>
+            </div>
+            <span id="hud-hp-text" class="hud-bar-text">100 / 100</span>
+          </div>
+
+          <!-- Kill Counter (Milestone to next Boss every 100 enemies!) -->
+          <div class="hud-bar-container">
+            <span class="hud-label">KILLS</span>
+            <div class="hud-progress-track">
+              <div id="hud-kill-bar-fill" class="hud-bar-fill kill-fill" style="width: 0%;"></div>
+            </div>
+            <span id="hud-kill-text" class="hud-bar-text">KILLS: 0 (100 to BOSS)</span>
+          </div>
+        </div>
+
+        <!-- Boss Health Bar (Appears during Boss encounters every 100 kills) -->
+        <div id="hud-boss-bar-container" class="hidden">
+          <div id="hud-boss-name">GIGA MECH GOLIATH</div>
+          <div class="boss-bar-track">
+            <div id="hud-boss-hp-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <div class="hud-right">
+          <span id="hud-fps-counter" class="hud-fps-pill">120 FPS · 8.3ms</span>
+          <button id="btn-toggle-fps" class="btn-fps-toggle" title="Toggle 120 FPS Boost / 4K Mode">⚡ 120 FPS BOOST</button>
+          <div id="hud-coop-multiplier-badge" class="hud-coop-pill hidden">🤝 CO-OP 2X DANGER</div>
+          <div class="hud-counter-pill hud-record-pill">🌊 Wave: <span id="hud-wave-text">1</span> <span class="sub-record">(Best <span id="hud-record-wave-text">1</span>)</span></div>
+          <div class="hud-counter-pill">🪙 <span id="hud-coins-text">0</span></div>
+          <div class="hud-counter-pill">💎 <span id="hud-crystals-text">0</span></div>
+          <div class="hud-counter-pill">🏃 <span id="hud-distance-text">0m</span></div>
+        </div>
+      </div>
+
+      <!-- 10 Laptop Hotbar Slots (Keys 1 to 0) -->
+      <div class="hud-bottom-bar">
+        <div id="hud-skill-hotbar">
+          <!-- Generated dynamically via hudUI.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-Time Split PvP Race HUD Overlay -->
+    <div id="race-hud-overlay" class="race-hud-container hidden">
+      <div class="race-hud-top">
+        <div class="race-speedometer-box">
+          <div class="race-speedometer-label">SPEED</div>
+          <div id="race-speedometer" class="race-speedometer-val">0 km/h</div>
+        </div>
+        <div class="race-clock-box">
+          <div id="race-clock" class="race-clock-text">00:60.0</div>
+          <div id="race-lead-diff" class="race-diff-pill tied">TIED (0m)</div>
+        </div>
+      </div>
+      <div class="race-track-container">
+        <div class="race-track-row">
+          <span class="race-runner-label">👤 YOU (<span id="race-p1-dist">0m</span>)</span>
+          <div class="race-track-bar">
+            <div id="race-p1-track-fill" class="race-track-fill p1-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div class="race-track-row">
+          <span class="race-runner-label">⚡ RIVAL (<span id="race-p2-dist">0m</span>)</span>
+          <div class="race-track-bar">
+            <div id="race-p2-track-fill" class="race-track-fill p2-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="main-menu">
+      <div class="menu-header">
+        <h1 class="game-title">HEADLESS HERO</h1>
+        <p class="game-subtitle">2D Cyberpunk Action Runner</p>
+        <div class="menu-top-stats">
+          <div class="currency-badge">🪙 Coins: <span id="menu-coin-count">0</span></div>
+          <div class="currency-badge">💎 Crystals: <span id="menu-crystal-count">0</span></div>
+          <div class="currency-badge">🏆 Record Kills: <span id="menu-high-kills">0</span></div>
+          <div class="currency-badge">🌊 Record Wave: <span id="menu-high-wave">1</span></div>
+        </div>
+      </div>
+
+      <div class="menu-actions-center">
+        <button id="btn-start-game" class="menu-btn btn-primary">▶ ENDLESS RUN</button>
+        <button id="btn-open-pvp-race" class="menu-btn btn-pvp">🏁 PVP SPEED RACE</button>
+        <button id="btn-open-coop" class="menu-btn btn-coop">🤝 CO-OP TEAM PLAY</button>
+        <button id="btn-open-checkpoints" class="menu-btn">🌀 SECTORS</button>
+        <button id="btn-open-shop" class="menu-btn">🛒 SHOP</button>
+        <button id="btn-open-upgrade" class="menu-btn">⚡ UPGRADE</button>
+        <button id="btn-open-custom" class="menu-btn">🦾 CUSTOM BAY</button>
+      </div>
+
+      <div class="menu-footer">
+        <div class="controls-hint">
+          <strong>Controls:</strong> Left Click: Attack (Bite / Shoot / Slash) | <strong>Keys 1-0:</strong> Skills | <strong>Space / W:</strong> Jump | <strong>P:</strong> Pause
+        </div>
+        <div class="footer-btn-row">
+          <button id="btn-toggle-sound" class="btn-small">🔊 Sound: ON</button>
+          <button id="btn-export-save" class="btn-small">💾 Export Save</button>
+          <button id="btn-import-save" class="btn-small">📂 Import Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. Shop Modal (4 Categories: Skill, Armour, Body, Weapon) -->
+    <div id="shop-modal" class="modal-overlay hidden">
+      <div class="modal-window">
+        <div class="modal-header">
+          <h2 class="modal-title">CYBER SHOP</h2>
+          <div class="currency-badge">🪙 <span id="shop-coin-count">0</span></div>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+
+        <div class="modal-tabs">
+          <button class="tab-btn shop-cat-btn active" data-cat="skill">✨ SKILL</button>
+          <button class="tab-btn shop-cat-btn" data-cat="armour">🛡️ ARMOUR</button>
+          <button class="tab-btn shop-cat-btn" data-cat="body">🦾 BODY</button>
+          <button class="tab-btn shop-cat-btn" data-cat="weapon">🗡️ WEAPON</button>
+        </div>
+
+        <!-- Weapon Sub-tabs (Gun & Sword Split) -->
+        <div id="weapon-sub-tabs" class="sub-tabs-bar hidden">
+          <button class="sub-tab-btn weapon-sub-btn active" data-sub="gun">🔫 GUNS (RANGED)</button>
+          <button class="sub-tab-btn weapon-sub-btn" data-sub="sword">⚔️ SWORDS (MELEE)</button>
+        </div>
+
+        <!-- Body Theme Filters -->
+        <div id="body-theme-tabs" class="sub-tabs-bar hidden">
+          <button class="sub-tab-btn body-filter-btn active" data-theme="all">ALL THEMES</button>
+          <button class="sub-tab-btn body-filter-btn" data-theme="cyborg">CYBORG</button>
+          <button class="sub-tab-btn body-filter-btn" data-theme="hulk">HULK</button>
+          <button class="sub-tab-btn body-filter-btn" data-theme="monster">MONSTER</button>
+          <button class="sub-tab-btn body-filter-btn" data-theme="alien">ALIEN</button>
+        </div>
+
+        <div class="modal-content-area">
+          <div id="shop-items-grid" class="cards-grid">
+            <!-- Populated dynamically via shopUI.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Upgrade Modal (Crystal Permanent Stat Boosts) -->
+    <div id="upgrade-modal" class="modal-overlay hidden">
+      <div class="modal-window">
+        <div class="modal-header">
+          <h2 class="modal-title">CRYSTAL UPGRADES</h2>
+          <div class="currency-badge">💎 <span id="upgrade-crystal-count">0</span></div>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+
+        <div class="modal-content-area">
+          <div id="upgrade-items-grid" class="cards-grid">
+            <!-- Populated dynamically via upgradeUI.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Customization Bay Modal (Body, Weapon Capacity, Armour, 10 Skills) -->
+    <div id="custom-modal" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 1000px;">
+        <div class="modal-header">
+          <h2 class="modal-title">CUSTOMIZATION BAY</h2>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+
+        <div class="modal-tabs">
+          <button class="tab-btn custom-tab-btn active" data-tab="body">🦾 CUSTOM BODY</button>
+          <button class="tab-btn custom-tab-btn" data-tab="weapon">🗡️ CUSTOM WEAPONS</button>
+          <button class="tab-btn custom-tab-btn" data-tab="armour">🛡️ CUSTOM ARMOUR</button>
+          <button class="tab-btn custom-tab-btn" data-tab="skill">✨ CUSTOM SKILLS (1-0)</button>
+        </div>
+
+        <div class="modal-content-area">
+          <div class="custom-layout">
+            <!-- Live Character Paperdoll Preview -->
+            <div class="custom-left-preview">
+              <canvas id="custom-preview-canvas" width="240" height="240"></canvas>
+              <div id="custom-stats-summary" class="custom-stats-summary">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Tab Content Controls -->
+            <div id="custom-content-area" class="custom-right-controls">
+              <!-- Populated dynamically via customUI.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Checkpoint Sector Selector Modal -->
+    <div id="checkpoint-modal" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 860px; max-height: 580px;">
+        <div class="modal-header">
+          <h2 class="modal-title">WARP CHECKPOINTS</h2>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+
+        <div style="padding: 12px 24px 4px 24px;">
+          <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">
+            Defeating milestone bosses establishes permanent warp coordinates. Beyond each sector, enemies equip cybernetics, mutations, and alien biology from the Shop!
+          </p>
+        </div>
+
+        <div class="modal-content-area" style="overflow-y: auto;">
+          <div id="checkpoint-list-grid" class="cards-grid">
+            <!-- Populated dynamically via main.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pause-overlay" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 440px; height: 320px; text-align: center; justify-content: center; align-items: center; gap: 16px; padding: 24px;">
+        <h2 class="modal-title" style="font-size: 34px;">GAME PAUSED</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 8px;">Press <strong>P</strong> or <strong>ESC</strong> to Resume</p>
+        <button id="btn-pause-resume" class="menu-btn btn-primary" style="width: 240px; padding: 12px;">▶ RESUME</button>
+        <button id="btn-pause-menu" class="menu-btn" style="width: 240px; padding: 10px; font-size: 16px;">🏠 MAIN MENU</button>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameover-modal" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 520px; height: 420px; text-align: center; padding: 24px;">
+        <h2 class="modal-title" style="color: var(--neon-pink); font-size: 34px;">SYSTEM TERMINATED</h2>
+        <p style="color: var(--text-secondary); margin-top: 6px;">Your head was crushed in the cyber wasteland.</p>
+
+        <div class="gameover-stats">
+          <div class="go-stat-card">
+            <div class="go-stat-title">Wave Reached</div>
+            <div id="go-wave" class="go-stat-val">1</div>
+          </div>
+          <div class="go-stat-card">
+            <div class="go-stat-title">Enemies Slain</div>
+            <div id="go-kills" class="go-stat-val">0</div>
+          </div>
+          <div class="go-stat-card">
+            <div class="go-stat-title">Record Wave</div>
+            <div id="go-record-wave" class="go-stat-val" style="color: #ffd700;">1</div>
+          </div>
+          <div class="go-stat-card">
+            <div class="go-stat-title">Record Kills</div>
+            <div id="go-record-kills" class="go-stat-val" style="color: #ffd700;">0</div>
+          </div>
+          <div class="go-stat-card">
+            <div class="go-stat-title">Distance Reached</div>
+            <div id="go-distance" class="go-stat-val">0m</div>
+          </div>
+          <div class="go-stat-card">
+            <div class="go-stat-title">Coins Earned</div>
+            <div id="go-coins" class="go-stat-val">0</div>
+          </div>
+          <div class="go-stat-card">
+            <div class="go-stat-title">Crystals Found</div>
+            <div id="go-crystals" class="go-stat-val">0</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 14px; justify-content: center; margin-top: 10px;">
+          <button id="btn-gameover-retry" class="menu-btn btn-primary" style="padding: 12px 28px; font-size: 16px;">🔄 RETRY RUN</button>
+          <button id="btn-gameover-menu" class="menu-btn" style="padding: 12px 28px; font-size: 16px;">🏠 MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. PvP Speed Race Modal -->
+    <div id="pvp-race-modal" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 580px; max-height: 90vh;">
+        <div class="modal-header">
+          <h2 class="modal-title" style="color: var(--neon-cyan);">🏁 PVP SPEED RACE</h2>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-content-area" style="padding: 20px 24px;">
+          <p style="color: var(--text-secondary); margin-bottom: 16px;">
+            Compete in a high-speed sprint! Run as far as possible before the clock hits zero.
+          </p>
+
+          <label style="font-size: 13px; font-weight: 700; color: var(--neon-cyan); letter-spacing: 1px; display: block; margin-bottom: 8px;">
+            ⏱️ SELECT RACE DURATION:
+          </label>
+          <div class="duration-selector-row">
+            <button class="btn-duration-preset" data-duration="30">30s SPRINT</button>
+            <button class="btn-duration-preset active" data-duration="60">60s GRAND PRIX</button>
+            <button class="btn-duration-preset" data-duration="120">120s ENDURANCE</button>
+            <button class="btn-duration-preset" data-duration="240">240s MARATHON</button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px; margin-bottom: 20px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Or Custom Duration (sec):</span>
+            <input type="number" id="race-custom-duration" class="cyber-input" placeholder="e.g. 45" min="10" max="600" style="width: 110px; padding: 6px 10px; font-size: 14px;">
+          </div>
+
+          <div class="race-launch-options">
+            <button id="btn-race-solo-ghost" class="menu-btn btn-primary" style="width: 100%; margin-bottom: 10px;">
+              👻 RACE VS AI GHOST RACER (SOLO / PRACTICE)
+            </button>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <button id="btn-race-create-room" class="menu-btn" style="flex: 1; font-size: 13px;">
+                📡 CREATE RACE ROOM
+              </button>
+              <div style="flex: 1; display: flex; gap: 6px;">
+                <input type="text" id="race-join-code-input" class="cyber-input" placeholder="CODE" maxlength="6" style="text-transform: uppercase; font-weight: bold; width: 60%;">
+                <button id="btn-race-join-room" class="menu-btn btn-secondary" style="flex: 1; padding: 8px 10px; font-size: 12px;">JOIN</button>
+              </div>
+            </div>
+            <div id="race-room-status" class="auth-feedback" style="margin-top: 10px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. Race Podium Modal -->
+    <div id="race-podium-modal" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 500px; text-align: center; padding: 24px;">
+        <h2 id="podium-title" class="modal-title" style="font-size: 36px; color: #ffd700;">🏆 VICTORY!</h2>
+        <p id="podium-sub" style="color: var(--text-secondary); margin-top: 6px;">Outran your rival!</p>
+
+        <div class="podium-stats-grid">
+          <div class="podium-card gold">
+            <div class="podium-rank">1ST PLACE</div>
+            <div class="podium-name">YOU</div>
+            <div id="podium-p1-dist" class="podium-metric">0m</div>
+          </div>
+          <div class="podium-card silver">
+            <div class="podium-rank">2ND PLACE</div>
+            <div id="podium-p2-name" class="podium-name">RIVAL</div>
+            <div id="podium-p2-dist" class="podium-metric">0m</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-around; margin: 16px 0; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-secondary);">TOP SPEED</div>
+            <div id="podium-peak-speed" style="font-size: 18px; font-weight: bold; color: var(--neon-cyan);">0 km/h</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-secondary);">PRIZE PURSE</div>
+            <div id="podium-reward" style="font-size: 18px; font-weight: bold; color: #ffd700;">+250 🪙</div>
+          </div>
+        </div>
+
+        <button id="btn-podium-menu" class="menu-btn btn-primary" style="width: 100%; padding: 12px;">🏠 RETURN TO MENU</button>
+      </div>
+    </div>
+
+    <!-- 9. Co-Op Team Play Modal -->
+    <div id="coop-modal" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 580px; max-height: 90vh;">
+        <div class="modal-header">
+          <h2 class="modal-title" style="color: var(--neon-green);">🤝 CO-OP TEAM PLAY</h2>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-content-area" style="padding: 20px 24px;">
+          <div class="coop-warning-banner">
+            ⚠️ <strong>DYNAMIC ENEMY SCALING ACTIVE:</strong><br>
+            Enemies spawn with <strong>2X HEALTH & DAMAGE</strong> for 1 Teammate (2 Players), and <strong>3X</strong> for 2 Teammates (3 Players)!
+          </div>
+
+          <p style="color: var(--text-secondary); margin: 14px 0 16px 0; font-size: 13px;">
+            Teammates run and fight on your main screen equipped with their custom paperdoll gear!
+          </p>
+
+          <button id="btn-coop-summon-ai" class="menu-btn btn-primary" style="width: 100%; margin-bottom: 12px;">
+            🤖 SUMMON CYBER-ALLY (SOLO CO-OP AI COMPANION)
+          </button>
+
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button id="btn-coop-create-room" class="menu-btn" style="flex: 1; font-size: 13px;">
+              📡 CREATE TEAM ROOM
+            </button>
+            <div style="flex: 1; display: flex; gap: 6px;">
+              <input type="text" id="coop-join-code-input" class="cyber-input" placeholder="CODE" maxlength="6" style="text-transform: uppercase; font-weight: bold; width: 60%;">
+              <button id="btn-coop-join-room" class="menu-btn btn-secondary" style="flex: 1; padding: 8px 10px; font-size: 12px;">JOIN</button>
+            </div>
+          </div>
+          <div id="coop-room-status" class="auth-feedback" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. User Account Authentication Modal (Login / Register) -->
+    <div id="auth-modal" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 460px; height: auto; max-height: 520px;">
+        <div class="modal-header">
+          <h2 id="auth-modal-title" class="modal-title">OPERATIVE LOGIN</h2>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+
+        <div class="modal-tabs">
+          <button class="tab-btn auth-tab-btn active" data-tab="login">🔑 LOGIN</button>
+          <button class="tab-btn auth-tab-btn" data-tab="register">📝 REGISTER</button>
+        </div>
+
+        <div class="modal-content-area" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+          <div class="auth-input-group">
+            <label style="display: block; font-size: 12px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 6px;">CALLSIGN (USERNAME)</label>
+            <input type="text" id="auth-username-input" class="cyber-input" placeholder="Enter username..." maxlength="20" autocomplete="username">
+          </div>
+
+          <div class="auth-input-group">
+            <label style="display: block; font-size: 12px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 6px;">SECURITY PASSCODE</label>
+            <input type="password" id="auth-password-input" class="cyber-input" placeholder="Enter password..." maxlength="40" autocomplete="current-password">
+          </div>
+
+          <div id="auth-feedback" class="auth-feedback"></div>
+
+          <button id="btn-auth-submit" class="menu-btn btn-primary" style="width: 100%; padding: 12px; margin-top: 4px;">
+            AUTHENTICATE & ENTER
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Administrator Command Center Modal -->
+    <div id="admin-modal" class="modal-overlay hidden">
+      <div class="modal-window" style="width: 1050px; height: 640px; max-height: 92vh;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">⚡</span>
+            <h2 class="modal-title" style="color: var(--neon-pink);">ADMINISTRATOR COMMAND CENTER</h2>
+          </div>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+
+        <div style="padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.35); border-bottom: 1px solid var(--panel-border);">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="admin-search-input" class="cyber-input" placeholder="🔍 Search operative accounts..." style="width: 280px; padding: 6px 12px; font-size: 13px;">
+            <button id="btn-admin-refresh" class="btn-small">🔄 Refresh Records</button>
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            Authority: <strong style="color: var(--neon-pink);">Full System Override</strong> | Direct SQLite Database Control
+          </div>
+        </div>
+
+        <div id="admin-feedback" class="auth-feedback" style="margin: 8px 24px 0 24px;"></div>
+
+        <div class="modal-content-area" style="overflow-y: auto; padding: 16px 24px;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Status</th>
+                <th>Coins</th>
+                <th>Crystals</th>
+                <th>Performance</th>
+                <th>Joined</th>
+                <th>Admin Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-table-body">
+              <!-- Populated dynamically via authUI.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

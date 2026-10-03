@@ -1,0 +1,15 @@
+{
+  "name": "headless-hero",
+  "version": "1.0.0",
+  "description": "2D Cyberpunk Auto-Runner with modular body parts, skills, and boss encounters",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "keywords": ["game", "2d", "runner", "cyberpunk", "canvas"],
+  "author": "Antigravity",
+  "license": "MIT"
+}
